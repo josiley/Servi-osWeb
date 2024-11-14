@@ -1,11 +1,11 @@
 CREATE TABLE departments(
-  id INT PRIMARY KEY AUTOINCREMENT,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   location TEXT NOT NULL
 );
 
 CREATE TABLE employees(
-  id INT PRIMARY KEY AUTOINCREMENT,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   salary FLOAT NOT NULL,
   department_id INT NOT NULL,
@@ -22,11 +22,20 @@ INSERT INTO employees (name, salary, department_id)
 	VALUES
     ('Paulo', 2500.00, 1),
     ('João', 3000.00, 2),
-    ('Ricardo', 2000.00, 3),
+    ('David', 2000.00, 3),
     ('Josiley', 3100.00, 2),
-    ('Thales', 1300.00, 2);
+    ('Alice', 1300.00, 2);
     
+SELECT * FROM employees;
+
 SELECT * FROM departments;
 
-SELECT * FROM departments INNER JOIN ;
+SELECT employees.name AS 'nomeFuncionario', departments.name AS 'nomeDepartamento' FROM employees inner JOIN departments ON employees.department_id=departments.id;
 
+SELECT employees.name AS 'nomeFuncionario', departments.name AS 'nomeDepartamento' FROM employees inner JOIN departments ON employees.department_id=departments.id WHERE employees.salary > 6000.00;
+
+UPDATE employees set salary=5500.00 where name='Alice';
+
+DELETE FROM employees WHERE name='David';
+
+SELECT name, salary FROM employees;
