@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        body{
+            margin: 0px;
+            font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+        }
+        header{
+            padding: 10px 0 20px 0;
+            background-color: lightblue;
+        }
+        .titulo{
+            text-align: center;
+        }
+        nav{
+            display: flex;
+            justify-content: center;
+        }
+        ul {
+            margin: 0;
+            padding:0;
+        }
+        li{
+            list-style: none; 
+            margin: 10px;
+            display: inline;
+        }
+        section{
+            max-width: 900px;
+            padding: 20px;
+            width: 80%; /* Defina uma largura fixa ou percentual */
+            margin: 0 auto; /* Centraliza horizontalmente */
+        }
+        footer{
+            text-align: center;
+        }
+        button{
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 class="titulo">Site teste</h1>
+        <nav>
+            <ul>
+                <li>Home</li>
+                <li>Sobre</li>
+                <li>Contato</li>
+            </ul>
+        </nav>
+    </header>
+    <section>
+        <article>
+            <h3>Conteúdo</h3>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla facilisi. Phasellus vel velit quis augue porttitor cursus. Donec auctor, lectus ac varius pharetra, urna turpis vehicula est, sit amet fermentum arcu erat sit amet lectus. Curabitur vitae risus ac arcu malesuada suscipit. In hac habitasse platea dictumst. Integer ut justo nisl. Fusce ornare felis non eros vehicula, non sagittis orci scelerisque. Praesent efficitur, purus vel laoreet volutpat, justo nisi finibus orci, in tempor sem lectus in justo.</p>
+            <p>Suspendisse potenti. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Morbi in velit at ipsum gravida ullamcorper a eget elit. Sed porttitor nulla id felis egestas tincidunt. Aliquam erat volutpat. Etiam et mi ut dui efficitur vehicula. Nulla tincidunt ex a vehicula viverra. Aenean ut erat nec enim pulvinar lacinia.</p>
+            <button onclick="emitirAlerta()">Clique aqui</button>
+        </article>
+    </section>
+    <footer>
+        Josiley Dantas Batista
+    </footer>
+    <script>
+        function emitirAlerta() {
+          alert("Você clicou no botão!");
+        }
+    </script>
+</body>
+</html>
