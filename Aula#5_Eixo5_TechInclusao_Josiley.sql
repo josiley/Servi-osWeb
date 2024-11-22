@@ -3,7 +3,7 @@ CREATE TABLE usuarios(
   nome TEXT NOT NULL
 );
 
-INSERT into usuarios (nome) VALUES ('Carlos Sousa'), ('Ana Silva');
+INSERT INTO usuarios (nome) VALUES ('Carlos Sousa'), ('Ana Silva');
 
 UPDATE usuarios SET nome='Carlos Almeida' WHERE nome='Carlos Sousa';
 /*OU UPDATE usuarios SET nome='Carlos Almeida' WHERE idUsuario=1;*/
