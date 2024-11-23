@@ -1,126 +1,97 @@
+const jwt = require('jsonwebtoken');
 const mysql = require('mysql2/promise');
-const bcrypt = require('bcrypt'); // Importa o bcrypt para hashing de senhas
+const bcrypt = require('bcrypt');
 
-// Cria a conexão apenas uma vez
-const connection = await mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'sua_senha',
-    database: 'seu_banco',
-});
+// Lista negra de tokens (armazenada em um Set)
+const listaNegraTokens = new Set();
 
-// Função para validar o nome de usuário
+// Função para revogar um token (adicionando-o à lista negra)
+function revogarToken(token) {
+    // Adiciona o token à lista negra
+    listaNegraTokens.add(token);
+    console.log('Token revogado com sucesso!');
+}
+
+// Função para verificar se um token está na lista negra (revogado)
+function verificarTokenRevogado(token) {
+    if (listaNegraTokens.has(token)) {
+        console.log('Token revogado.');
+        return true; // O token está revogado
+    }
+    console.log('Token não revogado.');
+    return false; // O token não está revogado
+}
+
+// Função para verificar a validade do token, levando em consideração a lista negra
+async function verificarTokenValido(token, secret) {
+    if (verificarTokenRevogado(token)) {
+        return 'Token revogado.';
+    }
+
+    try {
+        // Verifica e decodifica o token JWT
+        const decoded = jwt.verify(token, secret);
+        console.log('Token válido:', decoded);
+        return decoded;
+    } catch (error) {
+        console.error('Erro ao verificar o token:', error.message);
+        return 'Token inválido.';
+    }
+}
+
+// Função para gerar um token JWT (para testes)
+function gerarToken(usuario, secret) {
+    const token = jwt.sign({ usuario: usuario }, secret, { expiresIn: '1h' });
+    console.log('Token gerado:', token);
+    return token;
+}
+
+// Função para criar a conexão com o banco de dados
+let connection;
+
+async function criarConexao() {
+    if (!connection) {
+        connection = await mysql.createConnection({
+            host: 'localhost',
+            user: 'root',
+            password: 'sua_senha',
+            database: 'seu_banco',
+        });
+    }
+    return connection;
+}
+
+// Função para validar o nome do usuário com regex
 function validarNomeUsuario(nome) {
-    // Expressão regular: apenas caracteres alfanuméricos e entre 3 e 20 caracteres
-    const regex = /^[a-zA-Z0-9]{3,20}$/;
-
+    const regex = /^[a-zA-Z0-9]{3,20}$/; // Somente alfanumérico, entre 3 e 20 caracteres
     if (!regex.test(nome)) {
-        if (nome.length < 3) {
-            return 'O nome deve ter pelo menos 3 caracteres.';
-        } else if (nome.length > 20) {
-            return 'O nome não pode ter mais de 20 caracteres.';
-        } else {
-            return 'O nome deve conter apenas caracteres alfanuméricos.';
-        }
-    }
-
-    return 'Nome válido!';
-}
-
-// Função para buscar um usuário pelo nome
-async function buscarUsuarioPorNome(nome) {
-    try {
-        // Query para buscar um usuário pelo nome
-        const query = 'SELECT * FROM usuarios WHERE nome = ?';
-        
-        // Executa a query com prepared statements
-        const [rows] = await connection.execute(query, [nome]);
-
-        // Verifica se o usuário foi encontrado
-        if (rows.length === 0) {
-            console.log('Usuário não encontrado.');
-            return null; // Retorna null se o usuário não for encontrado
-        }
-
-        return rows[0]; // Retorna o primeiro usuário encontrado
-    } catch (error) {
-        console.error('Erro ao buscar usuário:', error.message);
-        throw error; // Lança o erro para tratamento externo, se necessário
+        throw new Error('Nome de usuário inválido. Deve conter apenas caracteres alfanuméricos e ter entre 3 e 20 caracteres.');
     }
 }
 
-// Função para atualizar a senha do usuário
-async function atualizarSenha(nome, novaSenha) {
-    try {
-        // Verifica se o nome do usuário existe no banco
-        const usuario = await buscarUsuarioPorNome(nome);
-        
-        if (!usuario) {
-            console.log('Usuário não encontrado. Não foi possível atualizar a senha.');
-            return;
-        }
-
-        // Gera o hash da nova senha com um fator de custo 10
-        const novaSenhaHash = await bcrypt.hash(novaSenha, 10);
-
-        // Query para atualizar a senha no banco
-        const query = 'UPDATE usuarios SET senha = ? WHERE nome = ?';
-        const [result] = await connection.execute(query, [novaSenhaHash, nome]);
-
-        // Verifica se a atualização foi bem-sucedida
-        if (result.affectedRows === 0) {
-            console.log('Nenhuma linha foi atualizada. Verifique o nome do usuário.');
-        } else {
-            console.log('Senha do usuário atualizada com sucesso.');
-        }
-        
-    } catch (error) {
-        console.error('Erro ao atualizar a senha:', error.message);
-        throw error; // Lança o erro para tratamento externo, se necessário
-    }
-}
-
-// Função para buscar um usuário pelo login (email)
-async function buscarUsuarioPorLogin(email) {
-    try {
-        // Query para buscar um usuário pelo email (login)
-        const query = 'SELECT * FROM usuarios WHERE email = ?';
-        
-        // Executa a query com prepared statements
-        const [rows] = await connection.execute(query, [email]);
-
-        // Verifica se o usuário foi encontrado
-        if (rows.length === 0) {
-            console.log('Usuário não encontrado.');
-            return null; // Retorna null se o usuário não for encontrado
-        }
-
-        return rows[0]; // Retorna o primeiro usuário encontrado
-
-    } catch (error) {
-        console.error('Erro ao buscar usuário:', error.message);
-        throw error; // Lança o erro para tratamento externo, se necessário
-    }
-}
-
-// Função para inserir um novo usuário no banco
+// Função para inserir um novo usuário com validação e bcrypt
 async function inserirUsuario(nome, email, senha) {
-    // Valida o nome do usuário
-    const nomeValidacao = validarNomeUsuario(nome);
-    if (nomeValidacao !== 'Nome válido!') {
-        console.log(nomeValidacao); // Retorna a mensagem de erro de validação
-        return;
-    }
-
     try {
-        // Gera o hash da senha com um fator de custo 10
+        // Valida o nome do usuário
+        validarNomeUsuario(nome);
+
+        // Cria a conexão
+        const conn = await criarConexao();
+
+        // Criptografa a senha usando bcrypt
         const senhaHash = await bcrypt.hash(senha, 10);
 
-        // Query para inserir os dados no banco
+        // Consulta SQL para inserir o novo usuário
         const query = 'INSERT INTO usuarios (nome, email, senha) VALUES (?, ?, ?)';
-        const [result] = await connection.execute(query, [nome, email, senhaHash]);
+
+        // Executa a query com prepared statements
+        const [result] = await conn.execute(query, [nome, email, senhaHash]);
 
         console.log('Usuário inserido com sucesso. ID:', result.insertId);
+
+        // Fecha a conexão
+        await conn.end();
+
         return result.insertId; // Retorna o ID do novo usuário
     } catch (error) {
         console.error('Erro ao inserir usuário:', error.message);
@@ -128,26 +99,99 @@ async function inserirUsuario(nome, email, senha) {
     }
 }
 
-// Exemplo de uso
-(async () => {
+// Função para buscar um usuário pelo login
+async function buscarUsuarioPorLogin(email) {
     try {
-        // Exemplo de inserção de novo usuário
-        const id1 = await inserirUsuario('João123', 'joao@example.com', 'senhaSegura123');
-        console.log('Novo usuário inserido com ID:', id1);
+        const conn = await criarConexao();
 
-        // Exemplo de busca de usuário por login (e-mail)
-        const usuario = await buscarUsuarioPorLogin('joao@example.com');
-        if (usuario) {
-            console.log('Dados do usuário:', usuario);
+        const query = 'SELECT * FROM usuarios WHERE email = ?';
+        const [rows] = await conn.execute(query, [email]);
+
+        if (rows.length === 0) {
+            console.log('Usuário não encontrado.');
+            await conn.end();
+            return null;
         }
 
-        // Atualizando a senha de um usuário
-        await atualizarSenha('João123', 'novaSenhaSegura123');
+        console.log('Usuário encontrado:', rows[0]);
+        await conn.end();
+        return rows[0];
     } catch (error) {
-        console.error('Erro:', error);
-    } finally {
-        // Fecha a conexão ao terminar todas as operações
-        await connection.end();
-        console.log('Conexão encerrada.');
+        console.error('Erro ao buscar usuário:', error.message);
+        throw error;
     }
+}
+
+// Função para atualizar a senha do usuário
+async function atualizarSenha(nome, novaSenha) {
+    try {
+        // Valida o nome do usuário
+        validarNomeUsuario(nome);
+
+        // Cria a conexão
+        const conn = await criarConexao();
+
+        // Verifica se o usuário existe no banco
+        const [rows] = await conn.execute('SELECT * FROM usuarios WHERE nome = ?', [nome]);
+        if (rows.length === 0) {
+            console.log('Usuário não encontrado.');
+            await conn.end();
+            return 'Usuário não encontrado.';
+        }
+
+        // Criptografa a nova senha usando bcrypt
+        const senhaHash = await bcrypt.hash(novaSenha, 10);
+
+        // Atualiza a senha no banco de dados
+        const query = 'UPDATE usuarios SET senha = ? WHERE nome = ?';
+        const [result] = await conn.execute(query, [senhaHash, nome]);
+
+        if (result.affectedRows === 0) {
+            console.log('Erro ao atualizar a senha.');
+            await conn.end();
+            return 'Erro ao atualizar a senha.';
+        }
+
+        console.log('Senha atualizada com sucesso.');
+        await conn.end();
+        return 'Senha atualizada com sucesso.';
+    } catch (error) {
+        console.error('Erro ao atualizar a senha:', error.message);
+        throw error;
+    }
+}
+
+// Exemplo de uso
+const secret = 'secretaChave';
+
+// Gerando um token JWT para um usuário de exemplo
+const token = gerarToken('usuarioExemplo', secret);
+
+// Verificando o token antes de revogá-lo
+verificarTokenValido(token, secret);
+
+// Revogando o token
+revogarToken(token);
+
+// Verificando o token após revogá-lo
+verificarTokenValido(token, secret);
+
+// Exemplo de inserção de usuário
+(async () => {
+    try {
+        const id = await inserirUsuario('Joao123', 'joao@example.com', 'senhaSegura123');
+        console.log('Novo usuário inserido com ID:', id);
+    } catch (error) {
+        console.error('Erro ao inserir usuário:', error);
+    }
+
+    // Exemplo de buscar usuário por login
+    const usuario = await buscarUsuarioPorLogin('joao@example.com');
+    if (usuario) {
+        console.log('Usuário encontrado:', usuario);
+    }
+
+    // Exemplo de atualização de senha
+    const resultado = await atualizarSenha('Joao123', 'novaSenhaSegura456');
+    console.log(resultado);
 })();
